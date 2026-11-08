@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#191c16">
-<title>DUNE II — Битва за Арракис · ver. 1.1</title>
+<title>DUNE II — Битва за Арракис · ver. 1.2</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 :root{--bg:#151812;--panel:#1d2119;--panel2:#24281f;--line:#363b2e;--text:#e9e8dc;--muted:#8c927e;--gold:#d7b770;--green:#aabb86;--red:#d0846a;--mono:'IBM Plex Mono',monospace;--font:'Manrope',Arial,sans-serif}
@@ -91,7 +91,7 @@ nav{height:100%;display:flex;align-items:stretch;gap:31px}nav button{background:
 <div class="panel radar"><div class="section-head"><span>ОРБИТАЛЬНЫЙ ОБЗОР</span><span class="live"><span class="dot"></span> LIVE</span></div><canvas id="minimap" width="520" height="240" aria-label="Мини-карта: нажмите для перемещения камеры"></canvas><div class="radar-footer"><span id="waveLabel">СЕКТОР ПОД НАБЛЮДЕНИЕМ</span><span>07 — A</span></div></div>
 </aside>
 </main>
-<footer class="footer"><span>НЕОФИЦИАЛЬНЫЙ ИГРОВОЙ КОНЦЕПТ · VER. 1.1 <span class="slash">/</span> ВДОХНОВЛЕНО DUNE II, 1992</span><span><kbd>SPACE</kbd> ТАКТИЧЕСКАЯ ПАУЗА</span><span><span class="dot"></span> АРРАКИС ЖДЁТ ВАШЕГО ПРИКАЗА</span></footer>
+<footer class="footer"><span>НЕОФИЦИАЛЬНЫЙ ИГРОВОЙ КОНЦЕПТ · VER. 1.2 <span class="slash">/</span> ВДОХНОВЛЕНО DUNE II, 1992</span><span><kbd>SPACE</kbd> ТАКТИЧЕСКАЯ ПАУЗА</span><span><span class="dot"></span> АРРАКИС ЖДЁТ ВАШЕГО ПРИКАЗА</span></footer>
 </div>
 <div class="overlay" id="archiveOverlay" role="dialog" aria-modal="true" aria-labelledby="archiveTitle">
 <div class="modal"><div class="modal-header"><div><div class="eyebrow">ПОЛЕВОЙ СПРАВОЧНИК / 22 ЕДИНИЦЫ</div><h2 id="archiveTitle">Арсенал Арракиса</h2></div><button class="icon-btn close-modal" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></div><div class="archive-filters" id="archiveFilters"><button class="filter active" data-filter="all">Все</button><button class="filter" data-filter="infantry">Пехота</button><button class="filter" data-filter="vehicle">Техника</button><button class="filter" data-filter="air">Авиация</button><button class="filter" data-filter="nature">Арракис</button></div><div class="archive-body"><div class="archive-grid" id="archiveGrid"></div><div class="archive-detail" id="archiveDetail"></div></div><div class="modal-foot">Авторская RTS-интерпретация: баланс и часть механик упрощены. Графика нарисована процедурно, без оригинальных спрайтов.</div></div>
@@ -281,6 +281,7 @@ g.gain.setValueAtTime(vol,now);g.gain.exponentialRampToValueAtTime(.001,now+dur)
 $('soundBtn').onclick=()=>{soundOn=!soundOn;$('soundBtn').innerHTML=svgIcon(soundOn?'sound':'mute');$('soundBtn').title=soundOn?'Выключить звук':'Включить звук';$('soundBtn').setAttribute('aria-label',$('soundBtn').title);sound('ready')};
 const canvas=$('gameCanvas'),ctx=canvas.getContext('2d'),mini=$('minimap'),mc=mini.getContext('2d');
 let CW=1000,CH=600,DPR=1,scale=1,camera={x:WW/2,y:WH/2,zoom:1};
+let campaignCheckpoint=null;
 let G,units=[],buildings=[],projectiles=[],effects=[],selected=[],nextId=1,mode=null,placement=null,productionTab='units',modalOpen=false,archiveFilter='all',archiveSelected='tank',mouse={x:WW/2,y:WH/2},drag=null,toastTimer=0,lastUI=0;
 function resize(){let b=canvas.getBoundingClientRect();CW=b.width;CH=b.height;DPR=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(CW*DPR);canvas.height=Math.round(CH*DPR);scale=Math.min(CW/WW,CH/WH)*camera.zoom}
 new ResizeObserver(resize).observe($('battlefield'));
@@ -290,7 +291,7 @@ function getSelected(){return allEntities().filter(u=>selected.includes(u.id))}
 function addUnit(kind,x,y,owner=0){const d=UNIT[kind],u={id:nextId++,kind,x,y,owner,hp:d.hp*(owner===1?.88:1)*(owner===0?1+.2*G.upgrades.armor:1),max:d.hp*(owner===1?.88:1)*(owner===0?1+.2*G.upgrades.armor:1),angle:owner?2.3:-.3,turretAngle:owner?2.3:-.3,cool:Math.random(),order:kind==='harvester'?'harvest':'guard',target:null,move:null,cargo:0,harvestState:'collect',spiceIndex:spicePatches.reduce((a,p,i)=>Math.hypot(p.x-x,p.y-y)<Math.hypot(spicePatches[a].x-x,spicePatches[a].y-y)?i:a,0),repair:false,flash:0};units.push(u);return u}
 function addBuilding(kind,x,y,owner=0,build=1){const d=BUILD[kind],b={id:nextId++,kind,x,y,owner,hp:d.hp*(owner===1?.85:1)*(build<1?.2:1),max:d.hp*(owner===1?.85:1),building:true,build,cool:0,repair:false,flash:0,turretAngle:-.8};buildings.push(b);return b}
 function resetGame(campaignIndex=0){
-G={state:'briefing',credits:1200,time:0,harvested:0,kills:0,score:0,queue:[],wave:0,nextWave:48,nextWorm:78,worm:null,powerUse:75,powerMax:130,cap:28,enemyCredits:1600,enemyQueue:[],enemyBuildCheck:0,enemyTrainCheck:0,stage:0,marketQueue:[],marketBought:0,mission:$('missionSelect').value,campaignIndex,transitionRemaining:0,upgrades:{weapons:0,armor:0,harvest:0,production:0}};
+G={state:'briefing',credits:1200,time:0,harvested:0,kills:0,score:0,queue:[],wave:0,nextWave:48,nextWorm:78,worm:null,powerUse:75,powerMax:130,cap:28,enemyCredits:1600,enemyQueue:[],enemyBuildCheck:0,enemyTrainCheck:0,stage:0,marketQueue:[],marketBought:0,mission:$('missionSelect').value,campaignIndex,transitionRemaining:0,missionHarvestStart:0,upgrades:{weapons:0,armor:0,harvest:0,production:0}};
 units=[];buildings=[];projectiles=[];effects=[];nextId=1;selected=[];mode=null;placement=null;camera={x:WW/2,y:WH/2,zoom:1};
 addBuilding('yard',350,686);addBuilding('wind',285,521);addBuilding('factory',491,532);addBuilding('refinery',565,764);addBuilding('turret',672,596);
 let shift=G.mission==='campaign'?(campaignIndex%3)*130:0;const enemy=addBuilding('yard',2000+shift,330,1);G.enemyHQ=enemy.id;addBuilding('wind',2100+shift,430,1);
@@ -299,10 +300,10 @@ addUnit('tank',1930+shift,530,1);addUnit('quad',2020+shift,540,1);addUnit('troop
 selected=[a.id];$('briefing').style.display='block';$('campaignTransition').style.display='none';showMissionDescription();$('pauseLayer').style.display='none';$('resultOverlay').classList.remove('open');$('placementBanner').classList.remove('show');$('zoomValue').textContent='100%';$('toast').classList.remove('show');$('pauseBtn').innerHTML=svgIcon('pause');modalOpen=false;renderProduction();updateSelection();updateUI();resize();
 }
 function toast(text,warning=false){$('toast').textContent=text;$('toast').style.borderLeftColor=warning?'#d0846a':'#d7b770';$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4200);if(warning)sound('warn')}
-function startGame(){if(G.state!=='briefing')return;G.mission=$('missionSelect').value;G.state='playing';$('briefing').style.display='none';sound('ready');toast('Командование принято. Харвестер приступил к добыче.')}
+function startGame(){if(G.state!=='briefing')return;G.mission=$('missionSelect').value;G.state='playing';$('briefing').style.display='none';if(G.mission==='campaign')saveCampaignCheckpoint();sound('ready');toast('Командование принято. Харвестер приступил к добыче.')}
 $('startBtn').onclick=startGame;
 function togglePause(){if(modalOpen)return;if(G.state==='playing'){G.state='paused';$('pauseLayer').style.display='flex';$('pauseBtn').innerHTML=svgIcon('play')}else if(G.state==='paused'){G.state='playing';$('pauseLayer').style.display='none';$('pauseBtn').innerHTML=svgIcon('pause')}sound('click')}
-$('pauseBtn').onclick=togglePause;$('resumeBtn').onclick=togglePause;$('restartPause').onclick=()=>{let i=G.campaignIndex;resetGame(i);startGame()};$('playAgain').onclick=()=>{if(G.mission==='campaign'&&G.state==='lost'){let i=G.campaignIndex;resetGame(i);startGame()}else resetGame()};
+$('pauseBtn').onclick=togglePause;$('resumeBtn').onclick=togglePause;$('restartPause').onclick=()=>{if(G.mission==='campaign')restoreCampaignCheckpoint();else{resetGame();startGame()}};$('playAgain').onclick=()=>{if(G.mission==='campaign'&&G.state==='lost')restoreCampaignCheckpoint();else resetGame()};
 function power(){let own=buildings.filter(b=>b.owner===0&&!b.dead&&b.build>=1);G.powerMax=own.filter(b=>b.kind==='yard').length*30+own.filter(b=>b.kind==='wind').length*100;G.powerUse=own.reduce((s,b)=>s+Math.max(0,BUILD[b.kind].power),0);G.cap=28+12*own.filter(b=>b.kind==='radar').length;return G.powerMax>=G.powerUse?1:.4}
 function unitCost(kind){return Math.round(UNIT[kind].price*(UNIT[kind].group==='infantry'&&buildings.some(b=>b.owner===0&&b.kind==='barracks'&&b.build>=1&&!b.dead)?.85:1))}
 function queueUnit(kind){
@@ -567,13 +568,48 @@ const CAMPAIGN=[
  {name:'Два соперника',enemy:'Ордосы и Харконнены',brief:'Кирилл: Ордосы и Харконнены усилили свои войска. В прототипе их представляет одна общая армия; уничтожьте её в секторе.'},
  {name:'Последняя битва',enemy:'Император',brief:'Кирилл: Император вступил в войну. Разбейте его силы: исход борьбы за Арракис зависит от вас.'}
 ];
-function campaignComplete(){let m=CAMPAIGN[G.campaignIndex];return m.quota?G.harvested>=m.quota:!allEntities().some(e=>e.owner===1)}
+function campaignComplete(){let m=CAMPAIGN[G.campaignIndex];return m.quota?G.harvested-G.missionHarvestStart>=m.quota:!allEntities().some(e=>e.owner===1)}
 function completeCampaignMission(){if(G.campaignIndex===CAMPAIGN.length-1){endGame(true);return}G.state='transition';G.transitionRemaining=5;let next=CAMPAIGN[G.campaignIndex+1];$('transitionTitle').textContent='Далее: миссия '+(G.campaignIndex+2)+' — '+next.name;$('transitionText').textContent=next.brief;$('campaignTransition').style.display='flex';cancelMode();sound('ready')}
-function updateCampaignTransition(dt){G.transitionRemaining-=dt;$('transitionTimer').textContent='Следующая миссия начнётся через '+Math.max(0,Math.ceil(G.transitionRemaining))+' сек.';if(G.transitionRemaining<=0){let i=G.campaignIndex+1;resetGame(i);startGame();toast('Миссия '+(i+1)+': '+CAMPAIGN[i].name)}}
+// Checkpoints capture the complete mission-start state, including object references between units.
+function saveCampaignCheckpoint(){campaignCheckpoint=structuredClone({G,units,buildings,projectiles,effects,selected,nextId,camera})}
+function restoreCampaignCheckpoint(){
+ if(!campaignCheckpoint){resetGame();return}
+ let saved=structuredClone(campaignCheckpoint);({G,units,buildings,projectiles,effects,selected,nextId,camera}=saved);
+ G.state='playing';modalOpen=false;mode=null;placement=null;drag=null;
+ $('resultOverlay').classList.remove('open');$('pauseLayer').style.display='none';$('campaignTransition').style.display='none';$('briefing').style.display='none';$('placementBanner').classList.remove('show');$('pauseBtn').innerHTML=svgIcon('pause');
+ renderProduction();updateSelection();updateUI();resize();toast('Миссия восстановлена с начала.');
+}
+// Find an unoccupied position without removing or moving any player assets.
+function enemySpawnPoint(x,y,w,h){
+ const candidates=[];for(let py=90;py<WH-90;py+=70)for(let px=90;px<WW-90;px+=70)candidates.push({x:px,y:py});
+ candidates.sort((a,b)=>(a.x-x)**2+(a.y-y)**2-((b.x-x)**2+(b.y-y)**2));
+ return candidates.find(p=>p.x>w/2+15&&p.x<WW-w/2-15&&p.y>h/2+15&&p.y<WH-h/2-15&&!buildings.some(b=>!b.dead&&Math.abs(p.x-b.x)<(w+BUILD[b.kind].w)/2+25&&Math.abs(p.y-b.y)<(h+BUILD[b.kind].h)/2+25)&&!units.some(u=>!u.dead&&Math.abs(p.x-u.x)<w/2+35&&Math.abs(p.y-u.y)<h/2+35));
+}
+function spawnNextEnemy(index){
+ let shift=(index%3)*130,origin={x:2000+shift,y:330};
+ function building(kind,x,y){let d=BUILD[kind],p=enemySpawnPoint(x,y,d.w,d.h);return p?addBuilding(kind,p.x,p.y,1):null}
+ function unit(kind,x,y){let p=enemySpawnPoint(x,y,35,35);return p?addUnit(kind,p.x,p.y,1):null}
+ let yard=building('yard',origin.x,origin.y);G.enemyHQ=yard?yard.id:null;
+ building('wind',origin.x+100,origin.y+100);
+ unit('tank',origin.x-70,origin.y+200);unit('quad',origin.x+20,origin.y+210);unit('troopers',origin.x+100,origin.y+215);
+ if(index>=4)unit('siege',origin.x-50,origin.y+110);
+ if(index>=7){building('turret',origin.x-160,origin.y+70);unit('tank',origin.x-130,origin.y+235)}
+}
+function advanceCampaign(){
+ const removed=new Set([...units,...buildings].filter(e=>e.owner===1));
+ units=units.filter(u=>u.owner===0&&!u.dead);buildings=buildings.filter(b=>b.owner===0&&!b.dead);
+ // Existing movement and harvesting orders continue, but enemy targets are no longer valid.
+ for(const u of units)if(u.target&&removed.has(u.target)){u.target=null;if(u.order==='attack')u.order='guard'}
+ projectiles=[];effects=[];G.worm=null;G.enemyQueue=[];G.enemyCredits=1600;G.enemyBuildCheck=0;G.enemyTrainCheck=0;G.wave=0;G.nextWave=G.time+48;G.nextWorm=G.time+65;
+ G.campaignIndex++;G.missionHarvestStart=G.harvested;spawnNextEnemy(G.campaignIndex);
+ G.state='playing';$('campaignTransition').style.display='none';selected=selected.filter(id=>allEntities().some(e=>e.id===id));
+ updateSelection();updateUI();saveCampaignCheckpoint();toast('Миссия '+(G.campaignIndex+1)+': '+CAMPAIGN[G.campaignIndex].name);
+}
+function updateCampaignTransition(dt){G.transitionRemaining-=dt;$('transitionTimer').textContent='Следующая миссия начнётся через '+Math.max(0,Math.ceil(G.transitionRemaining))+' сек.';if(G.transitionRemaining<=0)advanceCampaign()}
 const MISSIONS={campaign:{name:'Кампания Атрейдесов',harvest:1000,objective:'Квота спайса',description:'Девять миссий Атрейдесов. Следующая начнётся автоматически после победы.'},conquest:{name:'Битва за Арракин',harvest:2000,objective:'Уничтожить базу врага',description:'Разгромьте строительный двор Харконненов и поставьте 2 000 спайса.'},economy:{name:'Поставка Гильдии',harvest:3000,objective:'Продержаться 4 минуты',description:'Наладьте добычу 3 000 спайса и удерживайте базу 4 минуты.'},defense:{name:'Оборона рубежа',harvest:1500,objective:'12 целей или штаб',description:'Уничтожьте 12 вражеских целей или их штаб и соберите 1 500 спайса.'}};
 function missionOtherDone(){return G.mission==='conquest'?!buildings.some(b=>b.id===G.enemyHQ&&!b.dead):G.mission==='economy'?G.time>=240:G.kills>=12||!buildings.some(b=>b.id===G.enemyHQ&&!b.dead)}
 function missionComplete(){return G.harvested>=MISSIONS[G.mission].harvest&&missionOtherDone()}
-function showMissionDescription(){$('missionDescription').textContent=$('missionSelect').value==='campaign'?'9 миссий на одной карте. Противник — единая армия ИИ; база и улучшения сбрасываются между миссиями.':MISSIONS[$('missionSelect').value].description}
+function showMissionDescription(){$('missionDescription').textContent=$('missionSelect').value==='campaign'?'9 миссий на одной карте. Ваша база, войска, ресурсы и улучшения сохраняются при переходе.':MISSIONS[$('missionSelect').value].description}
 $('missionSelect').onchange=()=>{if(G.state==='briefing'){G.mission=$('missionSelect').value;showMissionDescription();updateUI()}};
 function updateStory(){
  if(G.stage===0&&G.harvested>=500){G.stage=1;G.credits+=250;toast('Глава II: поставки налажены. Совет выделил 250 кредитов.')}
@@ -596,7 +632,7 @@ $('resultRecord').textContent='ЛИЧНЫЙ РЕКОРД · '+fmt(best)+' ОЧК
 }
 function updateUI(){
 power();let cm=G.mission==='campaign'?CAMPAIGN[G.campaignIndex]:null;$('stageStory').innerHTML=cm?'<b>МИССИЯ '+(G.campaignIndex+1)+' / 9 · '+cm.name.toUpperCase()+'</b>'+cm.brief:'<b>'+STORY[G.stage][0]+'</b>'+(G.stage===2?MISSIONS[G.mission].description:STORY[G.stage][1]);let delivery=G.marketQueue[0];if(productionTab==='market')$('marketStatus').textContent=delivery?('ДОСТАВКА: '+UNIT[delivery.kind].name+' · '+(hasBuilding(0,'starport')?Math.max(0,Math.ceil(delivery.total-delivery.time))+' С':'ПАУЗА — НУЖЕН КОСМОПОРТ')+' · В ОЧЕРЕДИ '+G.marketQueue.length):'CHOAM · фиксированные цены · доставка 20 секунд';$('creditsValue').textContent=fmt(G.credits);$('energyValue').innerHTML=G.powerUse+' <small>/ '+G.powerMax+'</small>';$('energyValue').style.color=G.powerUse>G.powerMax?'#d0846a':'';$('armyValue').innerHTML=String(units.filter(u=>!u.owner&&!u.dead).length).padStart(2,'0')+' <small>/ '+G.cap+'</small>';$('timeValue').textContent=timeFmt(G.time);
-if(cm){let goal=cm.quota||0,left=allEntities().filter(e=>e.owner===1).length,complete=campaignComplete();$('harvestObjective').style.display=goal?'':'none';$('harvestProgress').parentElement.style.display=goal?'':'none';$('baseObjective').style.display=goal?'none':'';$('harvestValue').textContent=fmt(Math.min(G.harvested,goal))+' / '+fmt(goal);$('harvestProgress').style.width=goal?Math.min(100,G.harvested/goal*100)+'%':'0%';$('harvestObjective').classList.toggle('done',complete);$('harvestObjective').querySelector('.check').textContent=complete?'✓':'';$('missionObjective').textContent='Уничтожить силы противника';$('baseValue').textContent=left+' осталось';$('baseObjective').classList.toggle('done',complete);$('baseObjective').querySelector('.check').textContent=complete?'✓':'';$('objectiveCount').textContent=(complete?'1':'0')+' / 1'}else{$('harvestObjective').style.display='';$('harvestProgress').parentElement.style.display='';$('baseObjective').style.display='';let goal=MISSIONS[G.mission].harvest,h=G.harvested>=goal,b=missionOtherDone();$('harvestValue').textContent=fmt(Math.min(G.harvested,goal))+' / '+fmt(goal);$('harvestProgress').style.width=Math.min(100,G.harvested/goal*100)+'%';$('harvestObjective').classList.toggle('done',h);$('harvestObjective').querySelector('.check').textContent=h?'✓':'';$('baseObjective').classList.toggle('done',b);$('baseObjective').querySelector('.check').textContent=b?'✓':'';let base=buildings.find(b=>b.id===G.enemyHQ);$('missionObjective').textContent=MISSIONS[G.mission].objective;$('baseValue').textContent=G.mission==='conquest'?(base?Math.ceil(base.hp/base.max*100)+'%':'ГОТОВО'):G.mission==='economy'?timeFmt(Math.min(G.time,240))+' / 04:00':(b?'ГОТОВО':Math.min(G.kills,12)+' / 12');$('objectiveCount').textContent=(Number(h)+Number(b))+' / 2';}
+if(cm){let goal=cm.quota||0,left=allEntities().filter(e=>e.owner===1).length,complete=campaignComplete();$('harvestObjective').style.display=goal?'':'none';$('harvestProgress').parentElement.style.display=goal?'':'none';$('baseObjective').style.display=goal?'none':'';$('harvestValue').textContent=fmt(Math.min(G.harvested-G.missionHarvestStart,goal))+' / '+fmt(goal);$('harvestProgress').style.width=goal?Math.min(100,(G.harvested-G.missionHarvestStart)/goal*100)+'%':'0%';$('harvestObjective').classList.toggle('done',complete);$('harvestObjective').querySelector('.check').textContent=complete?'✓':'';$('missionObjective').textContent='Уничтожить силы противника';$('baseValue').textContent=left+' осталось';$('baseObjective').classList.toggle('done',complete);$('baseObjective').querySelector('.check').textContent=complete?'✓':'';$('objectiveCount').textContent=(complete?'1':'0')+' / 1'}else{$('harvestObjective').style.display='';$('harvestProgress').parentElement.style.display='';$('baseObjective').style.display='';let goal=MISSIONS[G.mission].harvest,h=G.harvested>=goal,b=missionOtherDone();$('harvestValue').textContent=fmt(Math.min(G.harvested,goal))+' / '+fmt(goal);$('harvestProgress').style.width=Math.min(100,G.harvested/goal*100)+'%';$('harvestObjective').classList.toggle('done',h);$('harvestObjective').querySelector('.check').textContent=h?'✓':'';$('baseObjective').classList.toggle('done',b);$('baseObjective').querySelector('.check').textContent=b?'✓':'';let base=buildings.find(b=>b.id===G.enemyHQ);$('missionObjective').textContent=MISSIONS[G.mission].objective;$('baseValue').textContent=G.mission==='conquest'?(base?Math.ceil(base.hp/base.max*100)+'%':'ГОТОВО'):G.mission==='economy'?timeFmt(Math.min(G.time,240))+' / 04:00':(b?'ГОТОВО':Math.min(G.kills,12)+' / 12');$('objectiveCount').textContent=(Number(h)+Number(b))+' / 2';}
 if(G.queue.length){let q=G.queue[0];$('queueLabel').textContent=missingTech(0,q.kind).length?'ПАУЗА: '+techMessage(missingTech(0,q.kind)):(UNIT[q.kind].name.toUpperCase()+' · '+Math.ceil(q.total-q.time)+' С'+(G.queue.length>1?' +'+(G.queue.length-1):''));$('queueProgress').style.width=q.time/q.total*100+'%'}else{$('queueLabel').textContent=G.powerUse>G.powerMax?'ДЕФИЦИТ ЭНЕРГИИ':'ПРОИЗВОДСТВО ГОТОВО';$('queueProgress').style.width='0%'}
 $('waveLabel').textContent=G.state==='briefing'?'СЕКТОР ПОД НАБЛЮДЕНИЕМ':!buildings.some(x=>x.id===G.enemyHQ&&!x.dead)?'ВРАЖЕСКАЯ БАЗА УНИЧТОЖЕНА':'ПОДКРЕПЛЕНИЕ · '+timeFmt(Math.max(0,G.nextWave-G.time));
 document.querySelectorAll('.production-card[data-kind]').forEach(b=>{let isBuilding=productionTab==='buildings',isMarket=productionTab==='market',missing=isMarket?(!hasBuilding(0,'starport')?['starport']:[]):missingTech(0,b.dataset.kind,isBuilding),d=isBuilding?BUILD[b.dataset.kind]:UNIT[b.dataset.kind],price=isMarket?MARKET[b.dataset.kind]:isBuilding?d.price:unitCost(b.dataset.kind);b.classList.toggle('unaffordable',G.credits<price||missing.length>0);b.title=d.name+' · '+(missing.length?techMessage(missing):'Технология доступна')});
