@@ -1,0 +1,6 @@
+{
+  "name": "dune-remaster-prototype",
+  "private": true,
+  "scripts": { "test": "node tests/campaign.test.cjs" },
+  "devDependencies": { "jsdom": "26.1.0" }
+}
